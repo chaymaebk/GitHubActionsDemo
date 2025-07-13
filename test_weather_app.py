@@ -3,8 +3,10 @@
 Test suite for Weather App
 """
 
-import pytest
 import json
+
+import pytest
+
 from weather_web_app_enhanced import app
 
 

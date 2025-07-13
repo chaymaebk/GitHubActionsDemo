@@ -5,10 +5,11 @@ Option 1: More demo cities
 Option 2: Real API integration
 """
 
-from flask import Flask, render_template_string, request, jsonify
-from datetime import datetime
-import requests
 import os
+from datetime import datetime
+
+import requests
+from flask import Flask, jsonify, render_template_string, request
 
 app = Flask(__name__)
 
