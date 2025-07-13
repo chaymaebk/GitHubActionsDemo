@@ -13,73 +13,260 @@ import os
 app = Flask(__name__)
 
 # OpenWeatherMap API key (replace with your own)
-API_KEY = '7ec7dd35b9c60e4a1768a3d26ae779ee'  # Your actual API key
+API_KEY = "7ec7dd35b9c60e4a1768a3d26ae779ee"  # Your actual API key
 API_URL = "https://api.openweathermap.org/data/2.5/weather"
 
 # Enhanced demo data with more popular cities
 DEMO_DATA = {
     # Europe
-    "london,gb": {"name": "London", "country": "United Kingdom", "weather": [{"main": "Clouds", "description": "broken clouds", "icon": "04d"}], "main": {"temp": 15, "feels_like": 13, "humidity": 72, "pressure": 1013}, "wind": {"speed": 5.2}, "visibility": 10000},
-    "paris,fr": {"name": "Paris", "country": "France", "weather": [{"main": "Clouds", "description": "partly cloudy", "icon": "02d"}], "main": {"temp": 20, "feels_like": 22, "humidity": 68, "pressure": 1018}, "wind": {"speed": 3.5}, "visibility": 15000},
-    "rome,it": {"name": "Rome", "country": "Italy", "weather": [{"main": "Clear", "description": "clear sky", "icon": "01d"}], "main": {"temp": 25, "feels_like": 27, "humidity": 60, "pressure": 1020}, "wind": {"speed": 2.8}, "visibility": 16000},
-    "madrid,es": {"name": "Madrid", "country": "Spain", "weather": [{"main": "Clear", "description": "clear sky", "icon": "01d"}], "main": {"temp": 26, "feels_like": 28, "humidity": 55, "pressure": 1019}, "wind": {"speed": 3.2}, "visibility": 18000},
-    "berlin,de": {"name": "Berlin", "country": "Germany", "weather": [{"main": "Clouds", "description": "overcast clouds", "icon": "04d"}], "main": {"temp": 18, "feels_like": 19, "humidity": 75, "pressure": 1015}, "wind": {"speed": 4.1}, "visibility": 12000},
-    "amsterdam,nl": {"name": "Amsterdam", "country": "Netherlands", "weather": [{"main": "Rain", "description": "light rain", "icon": "10d"}], "main": {"temp": 16, "feels_like": 15, "humidity": 85, "pressure": 1010}, "wind": {"speed": 5.5}, "visibility": 8000},
-    
+    "london,gb": {
+        "name": "London",
+        "country": "United Kingdom",
+        "weather": [{"main": "Clouds", "description": "broken clouds", "icon": "04d"}],
+        "main": {"temp": 15, "feels_like": 13, "humidity": 72, "pressure": 1013},
+        "wind": {"speed": 5.2},
+        "visibility": 10000,
+    },
+    "paris,fr": {
+        "name": "Paris",
+        "country": "France",
+        "weather": [{"main": "Clouds", "description": "partly cloudy", "icon": "02d"}],
+        "main": {"temp": 20, "feels_like": 22, "humidity": 68, "pressure": 1018},
+        "wind": {"speed": 3.5},
+        "visibility": 15000,
+    },
+    "rome,it": {
+        "name": "Rome",
+        "country": "Italy",
+        "weather": [{"main": "Clear", "description": "clear sky", "icon": "01d"}],
+        "main": {"temp": 25, "feels_like": 27, "humidity": 60, "pressure": 1020},
+        "wind": {"speed": 2.8},
+        "visibility": 16000,
+    },
+    "madrid,es": {
+        "name": "Madrid",
+        "country": "Spain",
+        "weather": [{"main": "Clear", "description": "clear sky", "icon": "01d"}],
+        "main": {"temp": 26, "feels_like": 28, "humidity": 55, "pressure": 1019},
+        "wind": {"speed": 3.2},
+        "visibility": 18000,
+    },
+    "berlin,de": {
+        "name": "Berlin",
+        "country": "Germany",
+        "weather": [
+            {"main": "Clouds", "description": "overcast clouds", "icon": "04d"}
+        ],
+        "main": {"temp": 18, "feels_like": 19, "humidity": 75, "pressure": 1015},
+        "wind": {"speed": 4.1},
+        "visibility": 12000,
+    },
+    "amsterdam,nl": {
+        "name": "Amsterdam",
+        "country": "Netherlands",
+        "weather": [{"main": "Rain", "description": "light rain", "icon": "10d"}],
+        "main": {"temp": 16, "feels_like": 15, "humidity": 85, "pressure": 1010},
+        "wind": {"speed": 5.5},
+        "visibility": 8000,
+    },
     # North America
-    "new york,us": {"name": "New York", "country": "United States", "weather": [{"main": "Clear", "description": "clear sky", "icon": "01d"}], "main": {"temp": 22, "feels_like": 24, "humidity": 55, "pressure": 1020}, "wind": {"speed": 3.8}, "visibility": 16000},
-    "los angeles,us": {"name": "Los Angeles", "country": "United States", "weather": [{"main": "Clear", "description": "clear sky", "icon": "01d"}], "main": {"temp": 28, "feels_like": 30, "humidity": 45, "pressure": 1022}, "wind": {"speed": 2.5}, "visibility": 20000},
-    "chicago,us": {"name": "Chicago", "country": "United States", "weather": [{"main": "Snow", "description": "light snow", "icon": "13d"}], "main": {"temp": 2, "feels_like": -2, "humidity": 80, "pressure": 1008}, "wind": {"speed": 6.2}, "visibility": 5000},
-    "toronto,ca": {"name": "Toronto", "country": "Canada", "weather": [{"main": "Clouds", "description": "few clouds", "icon": "02d"}], "main": {"temp": 10, "feels_like": 8, "humidity": 70, "pressure": 1016}, "wind": {"speed": 4.5}, "visibility": 14000},
-    "mexico city,mx": {"name": "Mexico City", "country": "Mexico", "weather": [{"main": "Clouds", "description": "scattered clouds", "icon": "03d"}], "main": {"temp": 24, "feels_like": 26, "humidity": 62, "pressure": 1012}, "wind": {"speed": 3.0}, "visibility": 13000},
-    
+    "new york,us": {
+        "name": "New York",
+        "country": "United States",
+        "weather": [{"main": "Clear", "description": "clear sky", "icon": "01d"}],
+        "main": {"temp": 22, "feels_like": 24, "humidity": 55, "pressure": 1020},
+        "wind": {"speed": 3.8},
+        "visibility": 16000,
+    },
+    "los angeles,us": {
+        "name": "Los Angeles",
+        "country": "United States",
+        "weather": [{"main": "Clear", "description": "clear sky", "icon": "01d"}],
+        "main": {"temp": 28, "feels_like": 30, "humidity": 45, "pressure": 1022},
+        "wind": {"speed": 2.5},
+        "visibility": 20000,
+    },
+    "chicago,us": {
+        "name": "Chicago",
+        "country": "United States",
+        "weather": [{"main": "Snow", "description": "light snow", "icon": "13d"}],
+        "main": {"temp": 2, "feels_like": -2, "humidity": 80, "pressure": 1008},
+        "wind": {"speed": 6.2},
+        "visibility": 5000,
+    },
+    "toronto,ca": {
+        "name": "Toronto",
+        "country": "Canada",
+        "weather": [{"main": "Clouds", "description": "few clouds", "icon": "02d"}],
+        "main": {"temp": 10, "feels_like": 8, "humidity": 70, "pressure": 1016},
+        "wind": {"speed": 4.5},
+        "visibility": 14000,
+    },
+    "mexico city,mx": {
+        "name": "Mexico City",
+        "country": "Mexico",
+        "weather": [
+            {"main": "Clouds", "description": "scattered clouds", "icon": "03d"}
+        ],
+        "main": {"temp": 24, "feels_like": 26, "humidity": 62, "pressure": 1012},
+        "wind": {"speed": 3.0},
+        "visibility": 13000,
+    },
     # Asia
-    "tokyo,jp": {"name": "Tokyo", "country": "Japan", "weather": [{"main": "Rain", "description": "light rain", "icon": "10d"}], "main": {"temp": 18, "feels_like": 19, "humidity": 85, "pressure": 1008}, "wind": {"speed": 2.5}, "visibility": 8000},
-    "beijing,cn": {"name": "Beijing", "country": "China", "weather": [{"main": "Haze", "description": "haze", "icon": "50d"}], "main": {"temp": 12, "feels_like": 10, "humidity": 65, "pressure": 1018}, "wind": {"speed": 1.8}, "visibility": 6000},
-    "mumbai,in": {"name": "Mumbai", "country": "India", "weather": [{"main": "Clouds", "description": "broken clouds", "icon": "04d"}], "main": {"temp": 32, "feels_like": 38, "humidity": 78, "pressure": 1005}, "wind": {"speed": 4.2}, "visibility": 9000},
-    "seoul,kr": {"name": "Seoul", "country": "South Korea", "weather": [{"main": "Clear", "description": "clear sky", "icon": "01d"}], "main": {"temp": 15, "feels_like": 16, "humidity": 58, "pressure": 1020}, "wind": {"speed": 2.9}, "visibility": 15000},
-    "bangkok,th": {"name": "Bangkok", "country": "Thailand", "weather": [{"main": "Thunderstorm", "description": "thunderstorm", "icon": "11d"}], "main": {"temp": 35, "feels_like": 42, "humidity": 88, "pressure": 1002}, "wind": {"speed": 1.5}, "visibility": 7000},
-    
+    "tokyo,jp": {
+        "name": "Tokyo",
+        "country": "Japan",
+        "weather": [{"main": "Rain", "description": "light rain", "icon": "10d"}],
+        "main": {"temp": 18, "feels_like": 19, "humidity": 85, "pressure": 1008},
+        "wind": {"speed": 2.5},
+        "visibility": 8000,
+    },
+    "beijing,cn": {
+        "name": "Beijing",
+        "country": "China",
+        "weather": [{"main": "Haze", "description": "haze", "icon": "50d"}],
+        "main": {"temp": 12, "feels_like": 10, "humidity": 65, "pressure": 1018},
+        "wind": {"speed": 1.8},
+        "visibility": 6000,
+    },
+    "mumbai,in": {
+        "name": "Mumbai",
+        "country": "India",
+        "weather": [{"main": "Clouds", "description": "broken clouds", "icon": "04d"}],
+        "main": {"temp": 32, "feels_like": 38, "humidity": 78, "pressure": 1005},
+        "wind": {"speed": 4.2},
+        "visibility": 9000,
+    },
+    "seoul,kr": {
+        "name": "Seoul",
+        "country": "South Korea",
+        "weather": [{"main": "Clear", "description": "clear sky", "icon": "01d"}],
+        "main": {"temp": 15, "feels_like": 16, "humidity": 58, "pressure": 1020},
+        "wind": {"speed": 2.9},
+        "visibility": 15000,
+    },
+    "bangkok,th": {
+        "name": "Bangkok",
+        "country": "Thailand",
+        "weather": [
+            {"main": "Thunderstorm", "description": "thunderstorm", "icon": "11d"}
+        ],
+        "main": {"temp": 35, "feels_like": 42, "humidity": 88, "pressure": 1002},
+        "wind": {"speed": 1.5},
+        "visibility": 7000,
+    },
     # Africa
-    "rabat,ma": {"name": "Rabat", "country": "Morocco", "weather": [{"main": "Clear", "description": "clear sky", "icon": "01d"}], "main": {"temp": 28, "feels_like": 30, "humidity": 65, "pressure": 1015}, "wind": {"speed": 4.1}, "visibility": 12000},
-    "cairo,eg": {"name": "Cairo", "country": "Egypt", "weather": [{"main": "Clear", "description": "clear sky", "icon": "01d"}], "main": {"temp": 35, "feels_like": 38, "humidity": 35, "pressure": 1018}, "wind": {"speed": 3.5}, "visibility": 18000},
-    "lagos,ng": {"name": "Lagos", "country": "Nigeria", "weather": [{"main": "Rain", "description": "heavy rain", "icon": "09d"}], "main": {"temp": 28, "feels_like": 33, "humidity": 92, "pressure": 1008}, "wind": {"speed": 2.8}, "visibility": 4000},
-    "cape town,za": {"name": "Cape Town", "country": "South Africa", "weather": [{"main": "Clear", "description": "clear sky", "icon": "01d"}], "main": {"temp": 22, "feels_like": 24, "humidity": 55, "pressure": 1020}, "wind": {"speed": 5.2}, "visibility": 16000},
-    
+    "rabat,ma": {
+        "name": "Rabat",
+        "country": "Morocco",
+        "weather": [{"main": "Clear", "description": "clear sky", "icon": "01d"}],
+        "main": {"temp": 28, "feels_like": 30, "humidity": 65, "pressure": 1015},
+        "wind": {"speed": 4.1},
+        "visibility": 12000,
+    },
+    "cairo,eg": {
+        "name": "Cairo",
+        "country": "Egypt",
+        "weather": [{"main": "Clear", "description": "clear sky", "icon": "01d"}],
+        "main": {"temp": 35, "feels_like": 38, "humidity": 35, "pressure": 1018},
+        "wind": {"speed": 3.5},
+        "visibility": 18000,
+    },
+    "lagos,ng": {
+        "name": "Lagos",
+        "country": "Nigeria",
+        "weather": [{"main": "Rain", "description": "heavy rain", "icon": "09d"}],
+        "main": {"temp": 28, "feels_like": 33, "humidity": 92, "pressure": 1008},
+        "wind": {"speed": 2.8},
+        "visibility": 4000,
+    },
+    "cape town,za": {
+        "name": "Cape Town",
+        "country": "South Africa",
+        "weather": [{"main": "Clear", "description": "clear sky", "icon": "01d"}],
+        "main": {"temp": 22, "feels_like": 24, "humidity": 55, "pressure": 1020},
+        "wind": {"speed": 5.2},
+        "visibility": 16000,
+    },
     # South America
-    "sao paulo,br": {"name": "São Paulo", "country": "Brazil", "weather": [{"main": "Rain", "description": "moderate rain", "icon": "10d"}], "main": {"temp": 25, "feels_like": 28, "humidity": 85, "pressure": 1010}, "wind": {"speed": 3.2}, "visibility": 8000},
-    "buenos aires,ar": {"name": "Buenos Aires", "country": "Argentina", "weather": [{"main": "Clouds", "description": "few clouds", "icon": "02d"}], "main": {"temp": 20, "feels_like": 21, "humidity": 68, "pressure": 1016}, "wind": {"speed": 4.0}, "visibility": 14000},
-    "lima,pe": {"name": "Lima", "country": "Peru", "weather": [{"main": "Mist", "description": "mist", "icon": "50d"}], "main": {"temp": 19, "feels_like": 20, "humidity": 82, "pressure": 1014}, "wind": {"speed": 2.1}, "visibility": 10000},
-    
+    "sao paulo,br": {
+        "name": "São Paulo",
+        "country": "Brazil",
+        "weather": [{"main": "Rain", "description": "moderate rain", "icon": "10d"}],
+        "main": {"temp": 25, "feels_like": 28, "humidity": 85, "pressure": 1010},
+        "wind": {"speed": 3.2},
+        "visibility": 8000,
+    },
+    "buenos aires,ar": {
+        "name": "Buenos Aires",
+        "country": "Argentina",
+        "weather": [{"main": "Clouds", "description": "few clouds", "icon": "02d"}],
+        "main": {"temp": 20, "feels_like": 21, "humidity": 68, "pressure": 1016},
+        "wind": {"speed": 4.0},
+        "visibility": 14000,
+    },
+    "lima,pe": {
+        "name": "Lima",
+        "country": "Peru",
+        "weather": [{"main": "Mist", "description": "mist", "icon": "50d"}],
+        "main": {"temp": 19, "feels_like": 20, "humidity": 82, "pressure": 1014},
+        "wind": {"speed": 2.1},
+        "visibility": 10000,
+    },
     # Oceania
-    "sydney,au": {"name": "Sydney", "country": "Australia", "weather": [{"main": "Clear", "description": "clear sky", "icon": "01d"}], "main": {"temp": 26, "feels_like": 28, "humidity": 60, "pressure": 1018}, "wind": {"speed": 3.8}, "visibility": 17000},
-    "auckland,nz": {"name": "Auckland", "country": "New Zealand", "weather": [{"main": "Rain", "description": "light rain", "icon": "10d"}], "main": {"temp": 16, "feels_like": 17, "humidity": 80, "pressure": 1012}, "wind": {"speed": 4.5}, "visibility": 11000},
+    "sydney,au": {
+        "name": "Sydney",
+        "country": "Australia",
+        "weather": [{"main": "Clear", "description": "clear sky", "icon": "01d"}],
+        "main": {"temp": 26, "feels_like": 28, "humidity": 60, "pressure": 1018},
+        "wind": {"speed": 3.8},
+        "visibility": 17000,
+    },
+    "auckland,nz": {
+        "name": "Auckland",
+        "country": "New Zealand",
+        "weather": [{"main": "Rain", "description": "light rain", "icon": "10d"}],
+        "main": {"temp": 16, "feels_like": 17, "humidity": 80, "pressure": 1012},
+        "wind": {"speed": 4.5},
+        "visibility": 11000,
+    },
 }
+
 
 def get_weather_icon(icon_code):
     """Return emoji icon based on weather code"""
     icon_map = {
-        '01d': '☀️', '01n': '🌙', '02d': '⛅', '02n': '⛅',
-        '03d': '☁️', '03n': '☁️', '04d': '☁️', '04n': '☁️',
-        '09d': '🌧️', '09n': '🌧️', '10d': '🌦️', '10n': '🌦️',
-        '11d': '⛈️', '11n': '⛈️', '13d': '❄️', '13n': '❄️',
-        '50d': '🌫️', '50n': '🌫️'
+        "01d": "☀️",
+        "01n": "🌙",
+        "02d": "⛅",
+        "02n": "⛅",
+        "03d": "☁️",
+        "03n": "☁️",
+        "04d": "☁️",
+        "04n": "☁️",
+        "09d": "🌧️",
+        "09n": "🌧️",
+        "10d": "🌦️",
+        "10n": "🌦️",
+        "11d": "⛈️",
+        "11n": "⛈️",
+        "13d": "❄️",
+        "13n": "❄️",
+        "50d": "🌫️",
+        "50n": "🌫️",
     }
-    return icon_map.get(icon_code, '🌤️')
+    return icon_map.get(icon_code, "🌤️")
 
-def fetch_real_weather(city, country=''):
+
+def fetch_real_weather(city, country=""):
     """Fetch weather from real OpenWeatherMap API"""
-    if API_KEY == 'demo_key':
+    if API_KEY == "demo_key":
         return None
-    
+
     try:
         query = f"{city},{country}" if country else city
-        params = {
-            'q': query,
-            'appid': API_KEY,
-            'units': 'metric'
-        }
-        
+        params = {"q": query, "appid": API_KEY, "units": "metric"}
+
         response = requests.get(API_URL, params=params, timeout=10)
         if response.status_code == 200:
             return response.json()
@@ -88,23 +275,38 @@ def fetch_real_weather(city, country=''):
     except:
         return None
 
+
 def get_popular_cities():
     """Get list of popular cities for demo buttons"""
     popular = [
-        ('London', 'GB'), ('Paris', 'FR'), ('New York', 'US'), ('Tokyo', 'JP'),
-        ('Rome', 'IT'), ('Madrid', 'ES'), ('Berlin', 'DE'), ('Mumbai', 'IN'),
-        ('Sydney', 'AU'), ('Toronto', 'CA'), ('Bangkok', 'TH'), ('Cairo', 'EG'),
-        ('São Paulo', 'BR'), ('Mexico City', 'MX'), ('Seoul', 'KR'), ('Rabat', 'MA')
+        ("London", "GB"),
+        ("Paris", "FR"),
+        ("New York", "US"),
+        ("Tokyo", "JP"),
+        ("Rome", "IT"),
+        ("Madrid", "ES"),
+        ("Berlin", "DE"),
+        ("Mumbai", "IN"),
+        ("Sydney", "AU"),
+        ("Toronto", "CA"),
+        ("Bangkok", "TH"),
+        ("Cairo", "EG"),
+        ("São Paulo", "BR"),
+        ("Mexico City", "MX"),
+        ("Seoul", "KR"),
+        ("Rabat", "MA"),
     ]
     return popular
 
-@app.route('/')
+
+@app.route("/")
 def index():
     """Main page with enhanced interface"""
     popular_cities = get_popular_cities()
-    api_status = "Real API" if API_KEY != 'demo_key' else "Demo Mode"
-    
-    return render_template_string('''
+    api_status = "Real API" if API_KEY != "demo_key" else "Demo Mode"
+
+    return render_template_string(
+        """
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -457,69 +659,75 @@ def index():
     </script>
 </body>
 </html>
-    ''', popular_cities=popular_cities, api_status=api_status, demo_cities_count=len(DEMO_DATA))
+    """,
+        popular_cities=popular_cities,
+        api_status=api_status,
+        demo_cities_count=len(DEMO_DATA),
+    )
 
-@app.route('/api/weather')
+
+@app.route("/api/weather")
 def get_weather():
     """API endpoint for weather data"""
-    city = request.args.get('city', '').strip()
-    country = request.args.get('country', '').strip()
-    
+    city = request.args.get("city", "").strip()
+    country = request.args.get("country", "").strip()
+
     if not city:
-        return jsonify({'error': 'City required'}), 400
-    
+        return jsonify({"error": "City required"}), 400
+
     # Try real API first if available
-    if API_KEY != 'demo_key':
+    if API_KEY != "demo_key":
         real_data = fetch_real_weather(city, country)
         if real_data:
             weather_data = {
-                'city': real_data['name'],
-                'country': real_data['sys']['country'],
-                'temperature': round(real_data['main']['temp']),
-                'feels_like': round(real_data['main']['feels_like']),
-                'description': real_data['weather'][0]['description'],
-                'icon': get_weather_icon(real_data['weather'][0]['icon']),
-                'humidity': real_data['main']['humidity'],
-                'wind_speed': real_data['wind']['speed'],
-                'pressure': real_data['main']['pressure'],
-                'visibility': round(real_data['visibility'] / 1000, 1),
-                'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                "city": real_data["name"],
+                "country": real_data["sys"]["country"],
+                "temperature": round(real_data["main"]["temp"]),
+                "feels_like": round(real_data["main"]["feels_like"]),
+                "description": real_data["weather"][0]["description"],
+                "icon": get_weather_icon(real_data["weather"][0]["icon"]),
+                "humidity": real_data["main"]["humidity"],
+                "wind_speed": real_data["wind"]["speed"],
+                "pressure": real_data["main"]["pressure"],
+                "visibility": round(real_data["visibility"] / 1000, 1),
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             }
             return jsonify(weather_data)
-    
+
     # Fall back to demo data
     search_key = f"{city.lower()},{country.lower()}" if country else city.lower()
-    
+
     data = None
     for key, value in DEMO_DATA.items():
         if search_key in key or city.lower() in key:
             data = value
             break
-    
+
     if not data:
-        return jsonify({'error': f'City "{city}" not found in demo data'}), 404
-    
+        return jsonify({"error": f'City "{city}" not found in demo data'}), 404
+
     weather_data = {
-        'city': data['name'],
-        'country': data['country'],
-        'temperature': round(data['main']['temp']),
-        'feels_like': round(data['main']['feels_like']),
-        'description': data['weather'][0]['description'],
-        'icon': get_weather_icon(data['weather'][0]['icon']),
-        'humidity': data['main']['humidity'],
-        'wind_speed': data['wind']['speed'],
-        'pressure': data['main']['pressure'],
-        'visibility': round(data['visibility'] / 1000, 1),
-        'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        "city": data["name"],
+        "country": data["country"],
+        "temperature": round(data["main"]["temp"]),
+        "feels_like": round(data["main"]["feels_like"]),
+        "description": data["weather"][0]["description"],
+        "icon": get_weather_icon(data["weather"][0]["icon"]),
+        "humidity": data["main"]["humidity"],
+        "wind_speed": data["wind"]["speed"],
+        "pressure": data["main"]["pressure"],
+        "visibility": round(data["visibility"] / 1000, 1),
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
-    
+
     return jsonify(weather_data)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     print("🌤️ Starting Enhanced Weather App...")
     print(f"📱 Open your browser at: http://localhost:5000")
     print(f"🗄️ Demo cities available: {len(DEMO_DATA)}")
-    if API_KEY != 'demo_key':
+    if API_KEY != "demo_key":
         print("🌍 Real API enabled - unlimited cities!")
     else:
         print("🎭 Demo mode - to enable real API:")
@@ -527,4 +735,4 @@ if __name__ == '__main__':
         print("   2. Set environment variable: OPENWEATHER_API_KEY=your_key")
         print("   3. Or edit API_KEY in the code")
     print("⏹️ Press Ctrl+C to stop")
-    app.run(debug=True, host='0.0.0.0', port=5000) 
+    app.run(debug=True, host="0.0.0.0", port=5000)
