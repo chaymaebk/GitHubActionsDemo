@@ -539,11 +539,6 @@ jobs:
     # Configure GitHub Pages
     - name: Setup Pages
       uses: actions/configure-pages@v4
-      with:
-        # Enable Pages if not already enabled
-        enablement: true
-        # Use the GitHub token for authentication
-        token: ${{ secrets.GITHUB_TOKEN }}
 
     # Upload the documentation files
     - name: Upload artifact
