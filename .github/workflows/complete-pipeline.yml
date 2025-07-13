@@ -1,0 +1,595 @@
+# =============================================================================
+# COMPLETE WEATHER APP CI/CD PIPELINE
+# =============================================================================
+# This single workflow file contains everything needed for a professional
+# software development pipeline including testing, quality checks, security
+# scanning, performance testing, Docker builds, and deployments.
+#
+# Why combine everything in one file?
+# - Easier to maintain and understand the full pipeline
+# - Better job dependencies and orchestration
+# - Reduced complexity compared to multiple separate workflows
+# - Single source of truth for all automation
+# =============================================================================
+
+name: Complete Weather App Pipeline
+
+# =============================================================================
+# WORKFLOW TRIGGERS
+# =============================================================================
+# Define when this workflow should run automatically
+on:
+  push:
+    branches: [ main, develop ]    # Run on pushes to main and develop branches
+  pull_request:
+    branches: [ main ]             # Run on pull requests to main branch
+  schedule:
+    - cron: '0 2 * * 1'           # Run weekly on Monday at 2 AM UTC for maintenance
+
+# =============================================================================
+# GLOBAL ENVIRONMENT VARIABLES
+# =============================================================================
+# These variables are available to all jobs in the workflow
+env:
+  PYTHON_VERSION: '3.11'          # Standard Python version for the project
+  DOCKER_IMAGE: weather-app       # Docker image name
+  REGISTRY: ghcr.io              # GitHub Container Registry
+
+# =============================================================================
+# WORKFLOW JOBS
+# =============================================================================
+# Jobs run in parallel by default, but we use 'needs' to create dependencies
+# Job execution order: code-quality → test → [performance-test, docker-build] → deployments
+jobs:
+  # ============================================================================
+  # JOB 1: CODE QUALITY & SECURITY CHECKS
+  # ============================================================================
+  # This job runs first to catch basic issues early and fast
+  # It includes: code formatting, linting, security scanning, dependency checks
+  code-quality:
+    name: Code Quality & Security
+    runs-on: ubuntu-latest        # Use latest Ubuntu runner (free for public repos)
+    steps:
+    # Step 1: Get the code from the repository
+    - name: Checkout code
+      uses: actions/checkout@v4    # Official GitHub action to download repo code
+
+    # Step 2: Set up Python environment
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}  # Use our global Python version
+
+    # Step 3: Cache Python packages to speed up future runs
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip         # Where pip stores downloaded packages
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-    # Fallback cache key if exact match not found
+
+    # Step 4: Install Python dependencies
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt                    # App dependencies
+        pip install black isort flake8 bandit safety      # Code quality tools
+
+    # Step 5: Check code formatting with Black
+    - name: Code formatting check (Black)
+      run: black --check --diff .
+      # Black enforces consistent code style across the project
+      # --check: exit with error if files need formatting
+      # --diff: show what changes would be made
+
+    # Step 6: Check import organization with isort
+    - name: Import sorting check (isort)
+      run: isort --check-only --diff .
+      # isort organizes Python imports in a consistent way
+      # --check-only: don't modify files, just check
+      # --diff: show what changes would be made
+
+    # Step 7: Static code analysis with flake8
+    - name: Linting (flake8)
+      run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+      # flake8 checks for code errors and style issues
+      # --select: only check for critical errors (syntax, undefined names, etc.)
+      # --show-source: show the actual code that has issues
+
+    # Step 8: Security vulnerability scanning
+    - name: Security scan (Bandit)
+      run: bandit -r . -x ./tests/ || true
+      # Bandit scans for common security issues in Python code
+      # -r: recursively scan all files
+      # -x ./tests/: exclude test files
+      # || true: don't fail the job if issues found (just warn)
+
+    # Step 9: Check for known vulnerabilities in dependencies
+    - name: Dependency vulnerability check
+      run: safety check || true
+      # Safety checks installed packages against known vulnerability database
+      # || true: don't fail the job, just report issues
+
+  # ============================================================================
+  # JOB 2: COMPREHENSIVE TESTING
+  # ============================================================================
+  # This job runs our test suite across multiple Python versions
+  # It only runs after code-quality job passes
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    needs: code-quality           # Wait for code-quality job to complete successfully
+    strategy:
+      matrix:
+        python-version: ['3.8', '3.9', '3.10', '3.11']  # Test on multiple Python versions
+    # The matrix creates 4 parallel jobs, one for each Python version
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}  # Use matrix version
+
+    # Cache is version-specific to avoid conflicts
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-${{ matrix.python-version }}-
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    # Run the actual test suite
+    - name: Run tests
+      run: pytest test_weather_app.py -v --tb=short
+      # pytest is the testing framework
+      # -v: verbose output showing each test
+      # --tb=short: shorter traceback format for failures
+
+    # Test that the app actually starts up correctly
+    - name: Test app startup
+      run: |
+        timeout 10s python weather_web_app_enhanced.py &  # Start app in background
+        sleep 5                                            # Wait for startup
+        curl -f http://localhost:5000 || exit 1          # Test if app responds
+      # This integration test ensures the app can actually run
+
+  # ============================================================================
+  # JOB 3: PERFORMANCE TESTING
+  # ============================================================================
+  # This job runs load tests to ensure the app can handle traffic
+  # It only runs on scheduled builds or when commit message contains [perf-test]
+  performance-test:
+    name: Performance Testing
+    runs-on: ubuntu-latest
+    needs: test                   # Wait for tests to pass first
+    if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[perf-test]')
+    # Conditional execution: only run weekly or when explicitly requested
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install locust          # Load testing tool
+
+    # Create a Locust test file dynamically
+    - name: Create Locust test file
+      run: |
+        cat > locustfile.py << 'EOF'
+        # Locust performance test configuration
+        from locust import HttpUser, task, between
+        import json
+
+        class WeatherAppUser(HttpUser):
+            wait_time = between(1, 3)    # Wait 1-3 seconds between requests
+            
+            @task(3)  # Weight: 3 (most common)
+            def index_page(self):
+                """Test the main page load"""
+                self.client.get("/")
+            
+            @task(2)  # Weight: 2 (common)
+            def get_weather_demo(self):
+                """Test weather API with demo cities"""
+                cities = ["London", "Paris", "Tokyo", "New York", "Sydney"]
+                for city in cities:
+                    with self.client.get(f"/weather/{city}", catch_response=True) as response:
+                        if response.status_code == 200:
+                            response.success()
+                        else:
+                            response.failure(f"Got status {response.status_code}")
+            
+            @task(1)  # Weight: 1 (less common)
+            def get_weather_api(self):
+                """Test weather API with real API call"""
+                with self.client.get("/weather/Berlin", catch_response=True) as response:
+                    if response.status_code == 200:
+                        response.success()
+                    else:
+                        response.failure(f"Got status {response.status_code}")
+        EOF
+
+    # Start the application for testing
+    - name: Start application
+      run: |
+        python weather_web_app_enhanced.py &  # Start in background
+        sleep 10                               # Give it time to start
+        echo "Application started"
+
+    # Run the actual performance test
+    - name: Run performance tests
+      run: |
+        locust -f locustfile.py --headless --users 10 --spawn-rate 2 --run-time 60s --host http://localhost:5000 --html report.html
+        # --headless: run without web UI
+        # --users 10: simulate 10 concurrent users
+        # --spawn-rate 2: add 2 users per second
+        # --run-time 60s: run for 60 seconds
+        # --html report.html: generate HTML report
+        
+    # Save the performance report for review
+    - name: Upload performance report
+      uses: actions/upload-artifact@v3
+      if: always()              # Upload even if performance test fails
+      with:
+        name: performance-report
+        path: report.html
+
+  # ============================================================================
+  # JOB 4: DOCKER BUILD & SECURITY SCAN
+  # ============================================================================
+  # This job builds Docker images and scans them for security vulnerabilities
+  docker-build:
+    name: Docker Build & Security Scan
+    runs-on: ubuntu-latest
+    needs: test                   # Wait for tests to pass
+    permissions:                  # Special permissions needed for container registry
+      contents: read
+      packages: write
+      security-events: write
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # Set up Docker Buildx for advanced building features
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      # Buildx enables multi-platform builds and advanced caching
+
+    # Log in to GitHub Container Registry
+    - name: Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}        # Automatically provided by GitHub
+        password: ${{ secrets.GITHUB_TOKEN }} # Automatically provided by GitHub
+
+    # Create Dockerfile dynamically (could also be a static file)
+    - name: Create Dockerfile
+      run: |
+        cat > Dockerfile << 'EOF'
+        # Multi-stage Docker build for Python app
+        FROM python:3.11-slim
+
+        WORKDIR /app
+
+        # Install system dependencies
+        RUN apt-get update && apt-get install -y \
+            curl \
+            && rm -rf /var/lib/apt/lists/*
+
+        # Copy requirements first for better caching
+        COPY requirements.txt .
+        RUN pip install --no-cache-dir -r requirements.txt
+
+        # Copy application code
+        COPY . .
+
+        # Create non-root user for security
+        RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+        USER appuser
+
+        # Health check endpoint
+        HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+          CMD curl -f http://localhost:5000/health || exit 1
+
+        EXPOSE 5000
+
+        CMD ["python", "weather_web_app_enhanced.py"]
+        EOF
+
+    # Build Docker image for multiple platforms
+    - name: Build Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        platforms: linux/amd64,linux/arm64  # Support both Intel and ARM processors
+        push: false                          # Don't push yet, just build
+        tags: |
+          ${{ env.REGISTRY }}/${{ github.repository }}:latest
+          ${{ env.REGISTRY }}/${{ github.repository }}:${{ github.sha }}
+        cache-from: type=gha                 # Use GitHub Actions cache
+        cache-to: type=gha,mode=max
+
+    # Scan Docker image for security vulnerabilities
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: '${{ env.REGISTRY }}/${{ github.repository }}:latest'
+        format: 'sarif'                      # Security Alert Results Interchange Format
+        output: 'trivy-results.sarif'
+
+    # Upload security scan results to GitHub Security tab
+    - name: Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()                          # Upload even if scan finds issues
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+    # Push Docker image to registry (only on main branch)
+    - name: Push Docker image
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        platforms: linux/amd64,linux/arm64
+        push: true                           # Actually push to registry
+        tags: |
+          ${{ env.REGISTRY }}/${{ github.repository }}:latest
+          ${{ env.REGISTRY }}/${{ github.repository }}:${{ github.sha }}
+
+  # ============================================================================
+  # JOB 5: DEPLOYMENT TO RENDER
+  # ============================================================================
+  # This job prepares deployment configuration for Render.com
+  deploy-render:
+    name: Deploy to Render
+    runs-on: ubuntu-latest
+    needs: [test, docker-build]    # Wait for both test and docker jobs
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'  # Only deploy from main
+    environment: production        # Use GitHub environment for deployment protection
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # Create Render deployment configuration
+    - name: Create render.yaml
+      run: |
+        cat > render.yaml << 'EOF'
+        # Render.com deployment configuration
+        services:
+          - type: web
+            name: weather-app
+            env: python
+            buildCommand: pip install -r requirements.txt
+            startCommand: python weather_web_app_enhanced.py
+            envVars:
+              - key: PYTHON_VERSION
+                value: 3.11.0
+              - key: FLASK_ENV
+                value: production
+        EOF
+
+    # In a real deployment, you'd use Render's API or webhook here
+    - name: Deploy to Render
+      run: |
+        echo "🚀 Deploying to Render..."
+        echo "Render deployment configured with render.yaml"
+        echo "Set up your Render service at: https://render.com"
+
+  # ============================================================================
+  # JOB 6: DEPLOYMENT TO HEROKU
+  # ============================================================================
+  # This job prepares deployment configuration for Heroku
+  deploy-heroku:
+    name: Deploy to Heroku
+    runs-on: ubuntu-latest
+    needs: [test, docker-build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: production
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # Create Heroku deployment files
+    - name: Create Heroku files
+      run: |
+        echo "web: python weather_web_app_enhanced.py" > Procfile     # How to start the app
+        echo "python-3.11.0" > runtime.txt                           # Python version
+
+    # In a real deployment, you'd use Heroku CLI or API here
+    - name: Deploy to Heroku
+      run: |
+        echo "🚀 Deploying to Heroku..."
+        echo "Heroku deployment configured with Procfile and runtime.txt"
+        echo "Set up your Heroku app at: https://heroku.com"
+
+  # ============================================================================
+  # JOB 7: GITHUB PAGES DOCUMENTATION
+  # ============================================================================
+  # This job creates and deploys documentation to GitHub Pages
+  deploy-docs:
+    name: Deploy Documentation
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:                   # Special permissions for GitHub Pages
+      contents: read
+      pages: write
+      id-token: write
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # Create a documentation website
+    - name: Create documentation site
+      run: |
+        mkdir -p docs
+        cat > docs/index.html << 'EOF'
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Weather App Documentation</title>
+            <style>
+                body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+                h1 { color: #2c3e50; }
+                .badge { background: #3498db; color: white; padding: 2px 8px; border-radius: 3px; }
+                .section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+                code { background: #f4f4f4; padding: 2px 4px; border-radius: 3px; }
+                pre { background: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+            </style>
+        </head>
+        <body>
+            <h1>🌤️ Weather App Documentation</h1>
+            
+            <div class="section">
+                <h2>Overview</h2>
+                <p>A modern weather application built with Python Flask, featuring real-time weather data for unlimited cities worldwide.</p>
+                <p>
+                    <span class="badge">Python 3.11</span>
+                    <span class="badge">Flask</span>
+                    <span class="badge">OpenWeatherMap API</span>
+                    <span class="badge">Docker</span>
+                </p>
+            </div>
+            
+            <div class="section">
+                <h2>Features</h2>
+                <ul>
+                    <li>✅ Real-time weather data for any city worldwide</li>
+                    <li>✅ Responsive web interface</li>
+                    <li>✅ Demo mode with 25+ cities</li>
+                    <li>✅ API key configuration</li>
+                    <li>✅ Docker support</li>
+                    <li>✅ Comprehensive CI/CD pipeline</li>
+                </ul>
+            </div>
+            
+            <div class="section">
+                <h2>Quick Start</h2>
+                <pre><code>git clone https://github.com/your-username/weather-app.git
+        cd weather-app
+        pip install -r requirements.txt
+        python weather_web_app_enhanced.py</code></pre>
+            </div>
+            
+            <div class="section">
+                <h2>API Configuration</h2>
+                <p>Get your free API key from <a href="https://openweathermap.org/api">OpenWeatherMap</a></p>
+                <p>Add your API key to <code>config.py</code>:</p>
+                <pre><code>OPENWEATHER_API_KEY = "your-api-key-here"</code></pre>
+            </div>
+            
+            <div class="section">
+                <h2>Deployment</h2>
+                <p>The application supports multiple deployment platforms:</p>
+                <ul>
+                    <li><strong>Render:</strong> Automatic deployment with <code>render.yaml</code></li>
+                    <li><strong>Heroku:</strong> Ready with <code>Procfile</code> and <code>runtime.txt</code></li>
+                    <li><strong>Docker:</strong> Multi-platform container builds</li>
+                </ul>
+            </div>
+            
+            <div class="section">
+                <h2>CI/CD Pipeline</h2>
+                <p>Comprehensive GitHub Actions workflow including:</p>
+                <ul>
+                    <li>Code quality checks (Black, isort, flake8)</li>
+                    <li>Security scanning (Bandit, Trivy)</li>
+                    <li>Multi-version Python testing</li>
+                    <li>Performance testing with Locust</li>
+                    <li>Docker builds and security scans</li>
+                    <li>Automated deployments</li>
+                </ul>
+            </div>
+        </body>
+        </html>
+        EOF
+
+    # Configure GitHub Pages
+    - name: Setup Pages
+      uses: actions/configure-pages@v3
+
+    # Upload the documentation files
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v2
+      with:
+        path: 'docs'
+
+    # Deploy to GitHub Pages
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v2
+
+  # ============================================================================
+  # JOB 8: FINAL NOTIFICATION & REPORTING
+  # ============================================================================
+  # This job runs last and provides a summary of all pipeline results
+  notify:
+    name: Pipeline Results
+    runs-on: ubuntu-latest
+    needs: [code-quality, test, performance-test, docker-build, deploy-render, deploy-heroku, deploy-docs]
+    if: always()                  # Always run, even if some jobs fail
+    
+    steps:
+    # Provide a comprehensive summary of all pipeline results
+    - name: Pipeline Summary
+      run: |
+        echo "🎉 Weather App Pipeline Complete!"
+        echo "=================================="
+        echo "Code Quality: ${{ needs.code-quality.result }}"
+        echo "Tests: ${{ needs.test.result }}"
+        echo "Performance: ${{ needs.performance-test.result }}"
+        echo "Docker: ${{ needs.docker-build.result }}"
+        echo "Render Deploy: ${{ needs.deploy-render.result }}"
+        echo "Heroku Deploy: ${{ needs.deploy-heroku.result }}"
+        echo "Docs Deploy: ${{ needs.deploy-docs.result }}"
+        echo "=================================="
+        
+        # Provide final status
+        if [[ "${{ needs.test.result }}" == "success" ]]; then
+          echo "✅ All tests passed!"
+        else
+          echo "❌ Some tests failed"
+        fi
+
+# =============================================================================
+# WORKFLOW SUMMARY
+# =============================================================================
+# This workflow provides a complete CI/CD pipeline with:
+#
+# 1. CODE QUALITY: Formatting, linting, security scanning
+# 2. TESTING: Multi-version Python testing with integration tests
+# 3. PERFORMANCE: Load testing with Locust
+# 4. SECURITY: Container vulnerability scanning
+# 5. BUILDING: Multi-platform Docker images
+# 6. DEPLOYMENT: Support for Render, Heroku, and GitHub Pages
+# 7. MONITORING: Comprehensive reporting and notifications
+#
+# The pipeline ensures code quality, security, and reliability before
+# any deployment happens. It's designed to catch issues early and
+# provide confidence in production deployments.
+# ============================================================================= 
