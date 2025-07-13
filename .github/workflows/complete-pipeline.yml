@@ -321,8 +321,9 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
-        platforms: linux/amd64,linux/arm64  # Support both Intel and ARM processors
+        platforms: linux/amd64              # Single platform for scanning
         push: false                          # Don't push yet, just build
+        load: true                           # Load image into local Docker daemon
         tags: |
           ${{ env.REGISTRY }}/${{ github.repository }}:latest
           ${{ env.REGISTRY }}/${{ github.repository }}:${{ github.sha }}
@@ -339,7 +340,7 @@ jobs:
 
     # Upload security scan results to GitHub Security tab
     - name: Upload Trivy scan results
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v3
       if: always()                          # Upload even if scan finds issues
       with:
         sarif_file: 'trivy-results.sarif'
