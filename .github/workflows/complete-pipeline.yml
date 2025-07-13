@@ -441,6 +441,9 @@ jobs:
       contents: read
       pages: write
       id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     
     steps:
     - name: Checkout code
@@ -536,6 +539,11 @@ jobs:
     # Configure GitHub Pages
     - name: Setup Pages
       uses: actions/configure-pages@v4
+      with:
+        # Enable Pages if not already enabled
+        enablement: true
+        # Use the GitHub token for authentication
+        token: ${{ secrets.GITHUB_TOKEN }}
 
     # Upload the documentation files
     - name: Upload artifact

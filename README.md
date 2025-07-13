@@ -245,7 +245,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Weather data provided by [OpenWeatherMap](https://openweathermap.org)
 - Icons from [Font Awesome](https://fontawesome.com)
 - Deployed on [Render](https://render.com) and [Heroku](https://heroku.com)
-
----
-
-**Made with ❤️ by [Your Name](https://github.com/yourusername)** 
