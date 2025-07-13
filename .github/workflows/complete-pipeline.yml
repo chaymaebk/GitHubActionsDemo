@@ -268,6 +268,9 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      
+    - name: Set lowercase repository name
+      run: echo "REPOSITORY_LC=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
 
     # Set up Docker Buildx for advanced building features
     - name: Set up Docker Buildx
@@ -325,8 +328,8 @@ jobs:
         push: false                          # Don't push yet, just build
         load: true                           # Load image into local Docker daemon
         tags: |
-          ${{ env.REGISTRY }}/${{ github.repository }}:latest
-          ${{ env.REGISTRY }}/${{ github.repository }}:${{ github.sha }}
+          ${{ env.REGISTRY }}/${{ env.REPOSITORY_LC }}:latest
+          ${{ env.REGISTRY }}/${{ env.REPOSITORY_LC }}:${{ github.sha }}
         cache-from: type=gha                 # Use GitHub Actions cache
         cache-to: type=gha,mode=max
 
@@ -334,14 +337,14 @@ jobs:
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
       with:
-        image-ref: '${{ env.REGISTRY }}/${{ github.repository }}:latest'
+        image-ref: '${{ env.REGISTRY }}/${{ env.REPOSITORY_LC }}:latest'
         format: 'sarif'                      # Security Alert Results Interchange Format
         output: 'trivy-results.sarif'
 
     # Upload security scan results to GitHub Security tab
     - name: Upload Trivy scan results
       uses: github/codeql-action/upload-sarif@v3
-      if: always()                          # Upload even if scan finds issues
+      if: always() && hashFiles('trivy-results.sarif') != ''  # Upload only if SARIF file exists
       with:
         sarif_file: 'trivy-results.sarif'
 
@@ -354,8 +357,8 @@ jobs:
         platforms: linux/amd64,linux/arm64
         push: true                           # Actually push to registry
         tags: |
-          ${{ env.REGISTRY }}/${{ github.repository }}:latest
-          ${{ env.REGISTRY }}/${{ github.repository }}:${{ github.sha }}
+          ${{ env.REGISTRY }}/${{ env.REPOSITORY_LC }}:latest
+          ${{ env.REGISTRY }}/${{ env.REPOSITORY_LC }}:${{ github.sha }}
 
   # ============================================================================
   # JOB 5: DEPLOYMENT TO RENDER
