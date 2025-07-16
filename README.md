@@ -327,12 +327,6 @@ bandit -r .
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙋‍♂️ Support
-
-- **Issues**: [GitHub Issues](https://github.com/yourusername/weather-app/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/weather-app/discussions)
-- **Email**: your.email@example.com
-
 ## 🌟 Acknowledgments
 
 - Weather data provided by [OpenWeatherMap](https://openweathermap.org)
