@@ -727,11 +727,13 @@ def get_weather():
 @app.route("/health")
 def health_check():
     """Health check endpoint for Docker and monitoring."""
-    return jsonify({
-        "status": "healthy",
-        "service": "weather-app",
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    })
+    return jsonify(
+        {
+            "status": "healthy",
+            "service": "weather-app",
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        }
+    )
 
 
 if __name__ == "__main__":
