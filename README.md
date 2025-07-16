@@ -82,7 +82,23 @@ A modern, responsive weather application with unlimited cities support and real-
 
 ## 🐳 Docker
 
-### Run with Docker
+### Quick Start with Docker Compose
+
+The easiest way to run the application with Docker:
+
+```bash
+# Set your API key (replace with your actual key)
+export OPENWEATHER_API_KEY=your_api_key_here
+
+# Start the application
+docker-compose up --build
+```
+
+The app will be available at `http://localhost:5000`
+
+### Manual Docker Commands
+
+#### Build and Run
 
 ```bash
 # Build the image
@@ -92,7 +108,45 @@ docker build -t weather-app .
 docker run -p 5000:5000 -e OPENWEATHER_API_KEY=your_api_key weather-app
 ```
 
-### Docker Compose
+#### Development Mode
+
+For development with live reload:
+
+```bash
+# Run with volume mounting for live code changes
+docker run -p 5000:5000 \
+  -e OPENWEATHER_API_KEY=your_api_key \
+  -v $(pwd):/app \
+  weather-app
+```
+
+### Docker Configuration
+
+#### Environment Variables
+
+The Docker setup supports all the same environment variables:
+
+```bash
+# Required
+OPENWEATHER_API_KEY=your_api_key_here
+
+# Optional
+FLASK_ENV=production  # or development
+```
+
+#### Health Checks
+
+The Docker container includes health checks:
+
+```bash
+# Check container health
+docker ps
+
+# Manual health check
+curl http://localhost:5000/health
+```
+
+#### Docker Compose Configuration
 
 ```yaml
 version: '3.8'
@@ -102,7 +156,46 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - OPENWEATHER_API_KEY=your_api_key_here
+      - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY:-demo_key}
+      - FLASK_ENV=${FLASK_ENV:-production}
+    volumes:
+      # Mount source code for development (comment out for production)
+      - .:/app
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+```
+
+### Production Deployment with Docker
+
+#### Using Docker Hub
+
+```bash
+# Build and tag for production
+docker build -t chaymae01/weather-app:latest .
+
+# Push to Docker Hub
+docker push chaymae01/weather-app:latest
+
+# Run in production
+docker run -d \
+  --name weather-app \
+  -p 5000:5000 \
+  -e OPENWEATHER_API_KEY=your_api_key \
+  --restart unless-stopped \
+  chaymae01/weather-app:latest
+```
+
+#### Multi-platform Build
+
+```bash
+# Build for multiple architectures
+docker buildx build --platform linux/amd64,linux/arm64 \
+  -t chaymae01/weather-app:latest --push .
 ```
 
 ## 📁 Project Structure

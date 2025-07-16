@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  weather-app:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY:-7ec7dd35b9c60e4a1768a3d26ae779ee}
+      - FLASK_ENV=${FLASK_ENV:-production}
+    volumes:
+      # Mount source code for development (comment out for production)
+      - .:/app
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:5000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Add a reverse proxy for production
+  # nginx:
+  #   image: nginx:alpine
+  #   ports:
+  #     - "80:80"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  #   depends_on:
+  #     - weather-app
+  #   restart: unless-stopped 

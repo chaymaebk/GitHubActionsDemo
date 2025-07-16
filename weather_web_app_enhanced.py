@@ -724,6 +724,16 @@ def get_weather():
     return jsonify(weather_data)
 
 
+@app.route("/health")
+def health_check():
+    """Health check endpoint for Docker and monitoring."""
+    return jsonify({
+        "status": "healthy",
+        "service": "weather-app",
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    })
+
+
 if __name__ == "__main__":
     print("🌤️ Starting Enhanced Weather App...")
     print(f"📱 Open your browser at: http://localhost:5000")
