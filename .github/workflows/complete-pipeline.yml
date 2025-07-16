@@ -285,6 +285,10 @@ jobs:
         username: ${{ github.actor }}        # Automatically provided by GitHub
         password: ${{ secrets.GITHUB_TOKEN }} # Automatically provided by GitHub
 
+    # Log in to Docker Hub
+    - name: Log in to Docker Hub
+      run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
     # Create Dockerfile dynamically (could also be a static file)
     - name: Create Dockerfile
       run: |
@@ -348,8 +352,8 @@ jobs:
       with:
         sarif_file: 'trivy-results.sarif'
 
-    # Push Docker image to registry (only on main branch)
-    - name: Push Docker image
+    # Push Docker image to GitHub Container Registry (only on main branch)
+    - name: Push Docker image to GitHub Registry
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
       uses: docker/build-push-action@v5
       with:
@@ -359,6 +363,16 @@ jobs:
         tags: |
           ${{ env.REGISTRY }}/${{ env.REPOSITORY_LC }}:latest
           ${{ env.REGISTRY }}/${{ env.REPOSITORY_LC }}:${{ github.sha }}
+
+    # Build Docker image for Docker Hub
+    - name: Build Docker image for Docker Hub
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: docker build -t ${{ secrets.DOCKER_USERNAME }}/weather-app:latest .
+
+    # Push Docker image to Docker Hub
+    - name: Push Docker image to Docker Hub
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      run: docker push ${{ secrets.DOCKER_USERNAME }}/weather-app:latest
 
   # ============================================================================
   # JOB 5: DEPLOYMENT TO RENDER
